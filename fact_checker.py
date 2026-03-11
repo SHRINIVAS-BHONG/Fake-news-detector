@@ -1,6 +1,6 @@
-import os
 from groq import Groq
 from tavily import TavilyClient
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,10 +37,10 @@ Evidence:
 {evidence}
 
 Tasks:
-1. Decide if the claim is real or fake.
+1. Determine if the claim is fake or real.
 2. Give fake probability (0-100%).
 3. Explain reasoning.
-4. Mention sources.
+4. Mention credible sources.
 
 Return format:
 

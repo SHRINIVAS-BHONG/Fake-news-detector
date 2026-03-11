@@ -1,5 +1,7 @@
 import streamlit as st
 from fact_checker import analyze_news
+from ocr_utils import extract_text_from_image
+from PIL import Image
 import time
 
 st.set_page_config(
@@ -9,96 +11,39 @@ st.set_page_config(
 )
 
 # -------------------------
-# Custom UI Styling
+# Styling
 # -------------------------
 
 st.markdown("""
 <style>
 
-.main-title {
-    font-size:40px;
-    font-weight:700;
-    background: linear-gradient(90deg,#3b82f6,#22c55e);
-    -webkit-background-clip:text;
-    color:transparent;
-}
-
-.subtitle {
-    color:#9ca3af;
-    font-size:16px;
-}
-
 .card {
     background:#111827;
-    padding:20px;
+    padding:22px;
     border-radius:12px;
     border:1px solid #1f2937;
-    margin-bottom:20px;
+    margin-bottom:25px;
 }
 
-.news-card {
-    background:#111827;
+.text-card {
+    background:#0f172a;
     padding:18px;
     border-radius:10px;
-    border-left:4px solid #3b82f6;
-    border:1px solid #1f2937;
-    margin-bottom:15px;
+    border:1px solid #374151;
+    font-size:15px;
+    line-height:1.7;
 }
 
-.news-title {
-    font-size:18px;
-    font-weight:600;
-}
-
-.news-content {
-    font-size:14px;
-    color:#d1d5db;
-    line-height:1.6;
-}
-
-.verdict-fake {
-    color:#ef4444;
-    font-weight:700;
-    font-size:20px;
-}
-
-.verdict-real {
-    color:#22c55e;
-    font-weight:700;
-    font-size:20px;
-}
-
-.verdict-misleading {
-    color:#facc15;
-    font-weight:700;
-    font-size:20px;
-}
-
-/* Input Box Styling */
-
-textarea {
-    border-radius:12px !important;
-    border:1px solid #374151 !important;
-    padding:12px !important;
-    font-size:16px !important;
-    background-color:#111827 !important;
-    color:#f9fafb !important;
-}
-
-textarea:focus {
-    border:1px solid #3b82f6 !important;
-    box-shadow:0 0 0 1px #3b82f6 !important;
-}
-
-textarea::placeholder {
-    color:#9ca3af !important;
+img {
+    border-radius:10px;
+    border:1px solid #374151;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------
-# Session State (History)
+# Session History
 # -------------------------
 
 if "history" not in st.session_state:
@@ -108,42 +53,67 @@ if "history" not in st.session_state:
 # Header
 # -------------------------
 
-st.markdown("<div class='main-title'>🧠 AI Fake News Detector</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Analyze news claims using AI reasoning and real web evidence.</div>", unsafe_allow_html=True)
-
-st.write("")
+st.title("🧠 AI Fake News Detector")
+st.write("Verify news claims using AI and real web evidence.")
 
 # -------------------------
-# Input Section
+# Text Input
 # -------------------------
 
-st.markdown("### 📰 Check a News Claim")
-
-st.markdown(
-"Paste a headline, tweet, or news message to analyze its credibility."
-)
+st.subheader("Enter News Claim")
 
 news = st.text_area(
-    "Enter News",
+    "News Input",
     placeholder="Example: NASA confirms alien life on Mars",
-    height=120,
     label_visibility="collapsed"
 )
 
-# Example suggestions
+# -------------------------
+# Upload Section
+# -------------------------
 
-st.caption("Try examples:")
+st.subheader("Upload Screenshot")
 
-col1, col2, col3 = st.columns(3)
+uploaded_file = st.file_uploader(
+    "Upload image containing a news claim",
+    type=["png","jpg","jpeg"]
+)
 
-with col1:
-    st.code("NASA confirms signs of life on Mars")
+if uploaded_file:
 
-with col2:
-    st.code("Scientists discover cure for cancer in mice")
+    image = Image.open(uploaded_file)
 
-with col3:
-    st.code("India bans TikTok again in 2025")
+    # Center column layout
+    left, center, right = st.columns([1,2,1])
+
+    with center:
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+
+        st.markdown("### 🖼 Uploaded Screenshot")
+
+        st.image(
+            image,
+            use_column_width=True
+        )
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # OCR Extraction
+        extracted_text = extract_text_from_image(image)
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+
+        st.markdown("### 📄 Extracted Text")
+
+        st.markdown(
+            f'<div class="text-card">{extracted_text}</div>',
+            unsafe_allow_html=True
+        )
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        news = extracted_text
 
 # -------------------------
 # Analyze Button
@@ -152,14 +122,11 @@ with col3:
 if st.button("Analyze Claim"):
 
     if news.strip() == "":
-        st.warning("Please enter text")
+        st.warning("Please enter or upload a claim")
 
     else:
 
-        with st.spinner("🔎 Extracting claim..."):
-            time.sleep(0.5)
-
-        with st.spinner("🌐 Searching evidence..."):
+        with st.spinner("🔎 Searching evidence..."):
             result, evidence = analyze_news(news)
 
         fake_prob = ""
@@ -187,7 +154,6 @@ if st.button("Analyze Claim"):
         except:
             prob = 0
 
-        # Save to history
         st.session_state.history.append({
             "claim":news,
             "verdict":verdict,
@@ -198,11 +164,11 @@ if st.button("Analyze Claim"):
         # AI Analysis
         # -------------------------
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
 
         st.subheader("AI Analysis")
 
-        col1,col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
         with col1:
             st.metric("Fake Probability", fake_prob)
@@ -211,64 +177,64 @@ if st.button("Analyze Claim"):
         with col2:
 
             if "fake" in verdict.lower():
-                st.markdown(f"<div class='verdict-fake'>🚨 {verdict}</div>", unsafe_allow_html=True)
+                st.error(f"🚨 {verdict}")
 
             elif "misleading" in verdict.lower():
-                st.markdown(f"<div class='verdict-misleading'>⚠️ {verdict}</div>", unsafe_allow_html=True)
+                st.warning(f"⚠️ {verdict}")
 
             else:
-                st.markdown(f"<div class='verdict-real'>✅ {verdict}</div>", unsafe_allow_html=True)
+                st.success(f"✅ {verdict}")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # -------------------------
         # Explanation
         # -------------------------
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
 
         st.subheader("Explanation")
 
-        text_box = st.empty()
-        stream=""
+        box = st.empty()
+        stream = ""
 
         for c in explanation:
             stream += c
-            text_box.markdown(stream)
+            box.markdown(stream)
             time.sleep(0.01)
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # -------------------------
         # Sources
         # -------------------------
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
 
         st.subheader("Sources")
 
         for s in sources:
             if s.strip():
-                st.write("•",s.strip())
+                st.write("•", s.strip())
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # -------------------------
-        # Evidence Section
+        # Evidence
         # -------------------------
 
-        st.subheader("📰 Evidence from Web")
+        st.subheader("Evidence")
 
         articles = evidence.split("Title:")
 
         for article in articles:
 
-            if article.strip()=="":
+            if article.strip() == "":
                 continue
 
-            title=""
-            content=""
-            source=""
+            title = ""
+            content = ""
+            source = ""
 
             lines = article.split("\n")
 
@@ -278,47 +244,31 @@ if st.button("Analyze Claim"):
                     title = lines[0]
 
                 if "Content:" in line:
-                    content = line.replace("Content:","").strip()
+                    content = line.replace("Content:", "").strip()
 
                 if "Source:" in line:
-                    source = line.replace("Source:","").strip()
+                    source = line.replace("Source:", "").strip()
 
-            st.markdown("<div class='news-card'>", unsafe_allow_html=True)
+            st.markdown("---")
 
-            st.markdown(f"<div class='news-title'>📰 {title}</div>", unsafe_allow_html=True)
+            st.markdown(f"### 📰 {title}")
 
             if content:
-                st.markdown(f"<div class='news-content'>{content[:250]}...</div>", unsafe_allow_html=True)
+                st.write(content[:250] + "...")
 
             if source:
                 st.markdown(f"[Read full article]({source})")
-
-            st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------
 # Sidebar History
 # -------------------------
 
-st.sidebar.title("🕘 Previous Checks")
+st.sidebar.title("🕘 History")
 
-if len(st.session_state.history)==0:
+for item in reversed(st.session_state.history):
 
-    st.sidebar.write("No checks yet")
-
-else:
-
-    for item in reversed(st.session_state.history):
-
-        icon="❌"
-
-        if "real" in item["verdict"].lower():
-            icon="✅"
-
-        elif "misleading" in item["verdict"].lower():
-            icon="⚠️"
-
-        st.sidebar.markdown(f"""
-**{icon} {item['claim'][:45]}...**
+    st.sidebar.markdown(f"""
+**{item['claim'][:40]}...**
 
 Verdict: {item['verdict']}  
 Probability: {item['prob']}
