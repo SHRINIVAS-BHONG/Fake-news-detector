@@ -1,29 +1,24 @@
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
+from parser import parser
 
-fake_news_prompt = PromptTemplate(
-    input_variables=["news", "sources"],
-    template="""
-You are an AI fact-checking assistant.
+prompt = ChatPromptTemplate.from_template(
+"""
+You are a professional fact-checker.
 
-Analyze the following news headline or message.
+Analyze the news and determine if it is FAKE or REAL.
 
-News:
+NEWS:
 {news}
 
-Supporting information from web sources:
+WEB SOURCES:
 {sources}
 
-Tasks:
-1. Determine if the news is Real, Fake, or Misleading
-2. Provide a fake probability score (0-100)
-3. Give a short explanation
+Return JSON.
 
-Return JSON format:
-
-{{
-"verdict": "",
-"fake_probability": "",
-"reason": ""
-}}
+{format_instructions}
 """
+)
+
+fake_news_prompt = prompt.partial(
+    format_instructions=parser.get_format_instructions()
 )
